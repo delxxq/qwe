@@ -1256,6 +1256,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ba16c2e6e7e27404ea20f10341c72794, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FightManager
+  isFinalRound: 1
   nextSceneName: 
   player: {fileID: 1295984915}
   bot: {fileID: 1619090423}

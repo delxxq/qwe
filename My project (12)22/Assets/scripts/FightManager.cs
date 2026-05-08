@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 
 public class FightManager : MonoBehaviour
 {
+    public bool isFinalRound;
     public string nextSceneName;
     [Header("Персонажи")]
     public Fighter player;
@@ -137,19 +138,36 @@ public void StartFight()
                 resultText.text = "БОТ ПОБЕДИЛ!";
             else
                 resultText.text = "ИГРОК ПОБЕДИЛ!";
+
             yield return new WaitForSeconds(2f);
-            if (!string.IsNullOrEmpty(nextSceneName))
+
+            // 3. ПРОВЕРЯЕМ: Если это ТРЕТИЙ (последний) раунд
+            if (isFinalRound)
             {
-                SceneManager.LoadScene(nextSceneName);
+                if (player.health <= 0)
+                {
+                    // Если в финале выиграл БОТ
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Mazik");
+                }
+                else
+                {
+                    // Если в финале выиграл ИГРОК
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Baka");
+                }
             }
             else
             {
-                resultText.text = "ФИНАЛ ИГРЫ!";
+                // 4. Если это 1-й или 2-й раунд, просто идем дальше
+                if (!string.IsNullOrEmpty(nextSceneName))
+                {
+                    UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
+                }
             }
 
-            yield break; 
+            yield break;
         }
     }
+    
 
     string ExecuteActions()
     {

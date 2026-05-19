@@ -1,9 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
 
 public class FightManager : MonoBehaviour
 {
@@ -46,8 +44,10 @@ public class FightManager : MonoBehaviour
     void Start()
     {
         UpdateHealthUI();
-        resultText.text = "Спланируй серию ударов!";
+        resultText.text = "Сплошной сервис упал!";
         sequenceText.text = "План: ";
+
+        // Назначение кнопок
         if (jabButton != null) jabButton.onClick.AddListener(PlayerJab);
         if (uppercutButton != null) uppercutButton.onClick.AddListener(PlayerUppercut);
         if (overhandButton != null) overhandButton.onClick.AddListener(PlayerOverhand);
@@ -58,8 +58,10 @@ public class FightManager : MonoBehaviour
             startFightButton.onClick.AddListener(StartFight);
             startFightButton.interactable = false;
         }
+
         SetActionButtonsInteractable(true);
     }
+
     void SetActionButtonsInteractable(bool interactable)
     {
         if (jabButton != null) jabButton.interactable = interactable;
@@ -68,6 +70,7 @@ public class FightManager : MonoBehaviour
         if (dodgeButton != null) dodgeButton.interactable = interactable;
         if (clearButton != null) clearButton.interactable = interactable;
     }
+
     public void PlayerJab() => AddToPlan(ActionType.Jab);
     public void PlayerUppercut() => AddToPlan(ActionType.Uppercut);
     public void PlayerOverhand() => AddToPlan(ActionType.Overhand);
@@ -82,12 +85,12 @@ public class FightManager : MonoBehaviour
             string actionName = "";
             switch (action)
             {
-                case ActionType.Jab: actionName = "Джеб"; break;
-                case ActionType.Uppercut: actionName = "Апперкот"; break;
-                case ActionType.Overhand: actionName = "Оверхенд"; break;
-                case ActionType.Dodge: actionName = "Уворот"; break;
+                case ActionType.Jab: actionName = "Джеб "; break;
+                case ActionType.Uppercut: actionName = "Апперкот "; break;
+                case ActionType.Overhand: actionName = "Оверхенд "; break;
+                case ActionType.Dodge: actionName = "Уворот "; break;
             }
-            sequenceText.text += actionName + " > ";
+            sequenceText.text += actionName;
         }
         if (startFightButton != null) startFightButton.interactable = true;
     }
@@ -96,11 +99,11 @@ public class FightManager : MonoBehaviour
     {
         if (isFighting) return;
         playerPlannedActions.Clear();
-        sequenceText.text = "План: ";
-        startFightButton.interactable = false;
+        if (sequenceText != null) sequenceText.text = "План: ";
+        if (startFightButton != null) startFightButton.interactable = false;
     }
-    
-public void StartFight()
+
+    public void StartFight()
     {
         if (playerPlannedActions.Count > 0 && !isFighting)
         {
@@ -119,21 +122,29 @@ public void StartFight()
         foreach (ActionType plannedAction in playerPlannedActions)
         {
             if (player.health <= 0 || bot.health <= 0) break;
+
             player.currentAction = plannedAction;
             bot.currentAction = bot.GetBotAction(player);
+
             SetPlayerActionImage(player.currentAction);
             SetBotActionImage(bot.currentAction);
+
             yield return new WaitForSeconds(0.6f);
+
             string roundResult = ExecuteActions();
             resultText.text = roundResult;
             UpdateHealthUI();
+
             yield return new WaitForSeconds(1.2f);
         }
 
+        // БОЙ ЗАКОНЧИЛСЯ (все действия выполнены)
+        isFighting = false;
+
+        // Проверяем, жив ли кто-то
         if (player.health <= 0 || bot.health <= 0)
         {
-            isFighting = false;
-
+            // Кто-то умер - игра завершается
             if (player.health <= 0)
                 resultText.text = "БОТ ПОБЕДИЛ!";
             else
@@ -141,33 +152,35 @@ public void StartFight()
 
             yield return new WaitForSeconds(2f);
 
-            // 3. ПРОВЕРЯЕМ: Если это ТРЕТИЙ (последний) раунд
             if (isFinalRound)
             {
                 if (player.health <= 0)
-                {
-                    // Если в финале выиграл БОТ
                     UnityEngine.SceneManagement.SceneManager.LoadScene("Mazik");
-                }
                 else
-                {
-                    // Если в финале выиграл ИГРОК
                     UnityEngine.SceneManagement.SceneManager.LoadScene("Baka");
-                }
             }
             else
             {
-                // 4. Если это 1-й или 2-й раунд, просто идем дальше
                 if (!string.IsNullOrEmpty(nextSceneName))
-                {
                     UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
-                }
             }
+        }
+        else
+        {
+            // ОБА ЖИВЫ - можно добирать действия!
+            resultText.text = "Раунд окончен! Выберите следующие действия!";
 
-            yield break;
+            // Очищаем план для нового набора действий
+            playerPlannedActions.Clear();
+            if (sequenceText != null) sequenceText.text = "План: ";
+
+            // Снова делаем кнопки активными
+            SetActionButtonsInteractable(true);
+
+            // Кнопка старта пока неактивна, пока игрок не выберет новые действия
+            if (startFightButton != null) startFightButton.interactable = false;
         }
     }
-    
 
     string ExecuteActions()
     {
@@ -185,18 +198,21 @@ public void StartFight()
             player.TakeDamage(bDmg);
             return $"Обмен! Вы: {pDmg} | Бот: {bDmg}";
         }
+
         if (IsAttack(pa))
         {
             int dmg = GetDamage(pa);
             bot.TakeDamage(dmg);
             return $"Вы нанесли {dmg} урона!";
         }
+
         if (IsAttack(ba))
         {
             int dmg = GetDamage(ba);
             player.TakeDamage(dmg);
             return $"Бот нанёс {dmg} урона!";
         }
+
         return "Ничего не произошло...";
     }
 
@@ -215,22 +231,20 @@ public void StartFight()
 
     void UpdateHealthUI()
     {
-        if (playerHealthText != null) playerHealthText.text = $"Игрок: {player.health}";
-        if (botHealthText != null) botHealthText.text = $"Бот: {bot.health}";
+        if (playerHealthText != null)
+            playerHealthText.text = $"Игрок: {player.health}";
+        if (botHealthText != null)
+            botHealthText.text = $"Бот: {bot.health}";
     }
+
     void SetPlayerActionImage(ActionType action)
     {
         if (playerActionImage == null) return;
-
         switch (action)
         {
             case ActionType.Jab: playerActionImage.sprite = playerJabSprite; break;
-            case ActionType.Uppercut:
-                playerActionImage.sprite = playerUppercutSprite; break;
-                
-
-
-case ActionType.Overhand: playerActionImage.sprite = playerOverhandSprite; break;
+            case ActionType.Uppercut: playerActionImage.sprite = playerUppercutSprite; break;
+            case ActionType.Overhand: playerActionImage.sprite = playerOverhandSprite; break;
             case ActionType.Dodge: playerActionImage.sprite = playerDodgeSprite; break;
             default: playerActionImage.sprite = playerNoneSprite; break;
         }
@@ -239,7 +253,6 @@ case ActionType.Overhand: playerActionImage.sprite = playerOverhandSprite; break
     void SetBotActionImage(ActionType action)
     {
         if (botActionImage == null) return;
-
         switch (action)
         {
             case ActionType.Jab: botActionImage.sprite = botJabSprite; break;
@@ -250,3 +263,4 @@ case ActionType.Overhand: playerActionImage.sprite = playerOverhandSprite; break
         }
     }
 }
+
